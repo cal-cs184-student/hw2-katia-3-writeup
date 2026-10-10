@@ -28,11 +28,12 @@
 	<body>
 		<div class="container">
 		<h1>CS184/284A Fall 2026 Homework 2 Write-Up</h1>
-		<div style="text-align: center;">Names: </div>
+		<div style="text-align: center;">Katia Jacoby </div>
 
 		<br>
+		
 
-		Link to webpage: (TODO) <a href="https://cs184.eecs.berkeley.edu/fa26">cs184.eecs.berkeley.edu/fa26</a>
+		Link to webpage: (TODO) <a href="https://cal-cs184-student.github.io/hw2-katia-3-writeup/">cal-cs184-student.github.io/hw2-katia-3-writeup</a>
 
 		<br>
 		
@@ -53,44 +54,144 @@
 		<h2>Section I: Bezier Curves and Surfaces</h2>
 
 		<h3>Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>De Casteljau's algorithm evaluates a Bezier curve at a parameter \(t \in [0, 1]\) through repeated linear interpolation. Starting from the \(n\) control points \(p_1, \dots, p_n\), we interpolate between each pair of adjacent points to get \(n - 1\) intermediate points at the next level:</p>
+		\[ p_i' = \text{lerp}(p_i, p_{i+1}, t) = (1-t)\,p_i + t\,p_{i+1} \]
+		<p>Repeating this step on the new points shrinks the list by one each time. After \(n - 1\) levels, a single point remains, and that point lies on the Bezier curve at \(t\). Sweeping \(t\) from 0 to 1 traces out the whole curve.</p>
 
-		<p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p>
+		<p>I implemented one level of this in <code>BezierCurve::evaluateStep(points)</code> in <code>student_code.cpp</code>. It creates an empty <code>std::vector&lt;Vector2D&gt;</code>, loops over each adjacent pair <code>points[i]</code> and <code>points[i + 1]</code>, and uses <code>push_back</code> to add \((1-t)\,p_i + t\,p_{i+1}\), where <code>t</code> is the class's member variable. It returns the new vector, which has one fewer point than the input. The GUI calls this function once each time E is pressed, so each press shows the next level.</p>
+
+		<p>To test it, I made my own Bezier curve with 6 control points (<code>bzc/my_curve.bzc</code>). The screenshots below step through each level of evaluation. White squares are the original control points, blue squares are the intermediate points, and the red square is the final evaluated point.</p>
 		<div style="display: flex; flex-direction: column; align-items: center;">
 			<table style="width: 100%; text-align: center; border-collapse: collapse;">
 			  <tr>
 				<td style="text-align: center;">
-				  <img src="assets/teapot.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
+				  <img src="assets/my_curve.png" width="400px"/>
+				  <figcaption>Level 0: the 6 original control points</figcaption>
 				</td>
 				<td style="text-align: center;">
-				  <img src="assets/teapot.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
+				  <img src="assets/my_curve_e1.png" width="400px"/>
+				  <figcaption>Level 1: 5 intermediate points</figcaption>
 				</td>
 			  </tr>
 			  <tr>
 				<td style="text-align: center;">
-				  <img src="assets/teapot.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
+				  <img src="assets/my_curve_e2.png" width="400px"/>
+				  <figcaption>Level 2: 4 intermediate points</figcaption>
 				</td>
 				<td style="text-align: center;">
-				  <img src="assets/teapot.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
+				  <img src="assets/my_curve_e3.png" width="400px"/>
+				  <figcaption>Level 3: 3 intermediate points</figcaption>
+				</td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/my_curve_e4.png" width="400px"/>
+				  <figcaption>Level 4: 2 intermediate points</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/my_curve_e5.png" width="400px"/>
+				  <figcaption>Level 5: the final evaluated point (red)</figcaption>
+				</td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/my_curve_c.png" width="400px"/>
+				  <figcaption>The completed Bezier curve (toggled with C)</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/my_curve_drag.png" width="400px"/>
+				  <figcaption>A modified curve, after moving the control points and changing \(t\) by scrolling</figcaption>
 				</td>
 			  </tr>
 			</table>
 		</div>
 
 		<h3>Part 2: Bezier surfaces with separable 1D de Casteljau</h3>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>A Bezier surface of degree \((n, m)\) is defined by an \((n+1) \times (m+1)\) grid of control points \(P_{ij}\) and two parameters \(u, v \in [0, 1]\). De Casteljau's algorithm extends to surfaces because the surface is <i>separable</i>: we can evaluate it as a curve of curves. Each row of control points \(P_{i0}, \dots, P_{im}\) defines its own 1D Bezier curve in \(u\). Evaluating every row at \(u\) gives one point \(P_i\) per row. Those points, which run roughly along a column of the grid, define a new Bezier curve in \(v\), and evaluating that curve at \(v\) gives the final point \(P(u, v)\) on the surface.</p>
+
+		<p>I implemented this with three functions in <code>student_code.cpp</code>:</p>
+		<ul>
+			<li><code>BezierPatch::evaluateStep(points, t)</code> performs one level of de Casteljau in 3D. For each adjacent pair it computes \(p_i' = (1-t)\,p_i + t\,p_{i+1}\) and pushes it into a new vector, so \(n\) points become \(n-1\). This is the same as Part 1, except that the points are <code>Vector3D</code> and \(t\) is passed in as an argument instead of read from a member variable.</li>
+			<li><code>BezierPatch::evaluate1D(points, t)</code> fully evaluates a 1D curve. It repeatedly calls <code>evaluateStep</code> until only one point remains, then returns that point.</li>
+			<li><code>BezierPatch::evaluate(u, v)</code> evaluates the surface. It loops over each row <code>controlPoints[i]</code>, calls <code>evaluate1D(controlPoints[i], u)</code>, and collects the results. It then returns <code>evaluate1D</code> of those row points at \(v\).</li>
+		</ul>
+
+		<p>Below is <code>bez/teapot.bez</code> evaluated with my implementation, with and without the wireframe.</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/katia's_teapot1.png" width="400px"/>
+				  <figcaption><code>bez/teapot.bez</code> with wireframe</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/katia's_teapot2.png" width="400px"/>
+				  <figcaption><code>bez/teapot.bez</code> without wireframe</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
 
 		<h2>Section II: Triangle Meshes and Half-Edge Data Structure</h2>
 
 		<h3>Part 3: Area-weighted vertex normals</h3>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>With flat shading, every point on a triangle uses that triangle's face normal, so the facets of the mesh are clearly visible. Phong shading instead interpolates normals stored at the vertices across each triangle, which gives a much smoother result. To get a good normal at a vertex, I take the normals of all the triangles touching that vertex, weight each one by its triangle's area, and normalize the sum. Larger faces have more influence, which makes the result less sensitive to small, thin triangles.</p>
+
+		<p>I implemented this in <code>Vertex::normal()</code> in <code>student_code.cpp</code>:</p>
+		<ul>
+			<li><b>Walking around the vertex.</b> I start with the vertex's outgoing half-edge <code>h = halfedge()</code> and step to the next outgoing half-edge with <code>h = h-&gt;twin()-&gt;next()</code> until I return to the start. Each step visits one face incident to the vertex. Because the function is <code>const</code>, I use <code>HalfedgeCIter</code>.</li>
+			<li><b>Getting the triangle.</b> A face only points to one half-edge, so I get its three corners from the half-edges themselves: \(a\) = <code>h-&gt;vertex()</code>, \(b\) = <code>h-&gt;next()-&gt;vertex()</code>, and \(c\) = <code>h-&gt;next()-&gt;next()-&gt;vertex()</code>.</li>
+			<li><b>Area-weighted normal.</b> The cross product \((b - a) \times (c - a)\) is perpendicular to the triangle, and its length is twice the triangle's area. Adding up the raw cross products therefore weights each face normal by its area automatically. The factor of 2 doesn't matter because the sum is normalized at the end.</li>
+			<li><b>Orientation.</b> Faces store their vertices in counterclockwise order, so this cross product order makes the normals point outward. Reversing the order would point them into the mesh and make the shading very dark.</li>
+			<li><b>Boundaries.</b> I skip the virtual boundary faces (<code>h-&gt;face()-&gt;isBoundary()</code>), since they aren't real triangles.</li>
+		</ul>
+		<p>Finally, I return the normalized sum with <code>.unit()</code>.</p>
+
+		<p>Below is <code>dae/teapot.dae</code> with flat shading and with Phong shading using my vertex normals (toggled with Q).</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/p3_flat.png" width="400px"/>
+				  <figcaption>Flat shading (face normals)</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/p3_phong.png" width="400px"/>
+				  <figcaption>Phong shading (area-weighted vertex normals)</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
 
 		<h3>Part 4: Edge flip</h3>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>An edge flip takes two triangles \((a, b, c)\) and \((c, b, d)\) that share the edge \((b, c)\) and replaces that edge with the other diagonal of the quadrilateral, \((a, d)\), producing the triangles \((a, d, c)\) and \((a, b, d)\). No elements are created or destroyed: the same 6 inner half-edges, 5 edges, 4 vertices, and 2 faces are reused, and only their pointers change.</p>
+
+		<p>I implemented this in <code>HalfedgeMesh::flipEdge(e0)</code> in <code>student_code.cpp</code>, following the spec's recommendation to write out every element before and after the flip and then reassign <i>every</i> pointer, even ones that don't change:</p>
+		<ul>
+			<li><b>Labeling.</b> Starting from <code>h0 = e0-&gt;halfedge()</code> (b &rarr; c), I walk <code>next()</code> to get <code>h1</code> (c &rarr; a) and <code>h2</code> (a &rarr; b) in face <code>f0</code>, and use <code>h3 = h0-&gt;twin()</code> (c &rarr; b) to get <code>h4</code> (b &rarr; d) and <code>h5</code> (d &rarr; c) in face <code>f1</code>. I also save the four outer twins <code>h6</code>&ndash;<code>h9</code>, the vertices \(a, b, c, d\), the edges <code>e0</code>&ndash;<code>e4</code>, and the faces <code>f0</code> and <code>f1</code>.</li>
+			<li><b>Boundary check.</b> If either <code>h0-&gt;face()</code> or <code>h3-&gt;face()</code> is a boundary face, I return immediately without flipping.</li>
+			<li><b>Rewiring.</b> Using <code>Halfedge::setNeighbors(next, twin, vertex, edge, face)</code>, I rebuild <code>f0</code> as the loop <code>h0</code> (a &rarr; d) &rarr; <code>h5</code> (d &rarr; c) &rarr; <code>h1</code> (c &rarr; a), and <code>f1</code> as <code>h3</code> (d &rarr; a) &rarr; <code>h2</code> (a &rarr; b) &rarr; <code>h4</code> (b &rarr; d). Both stay counterclockwise, and <code>h0</code>/<code>h3</code> remain twins on the flipped edge <code>e0</code>.</li>
+			<li><b>Element pointers.</b> I then reset the <code>halfedge()</code> pointer of every vertex, edge, and face. The key ones are \(b\) and \(c\): each loses the outgoing half-edge it had along the old edge, so their pointers must be moved to <code>h4</code> and <code>h1</code>, or they would point to a half-edge that no longer starts at them.</li>
+		</ul>
+		<p>This is constant work, independent of mesh size, and the function returns <code>e0</code>, which is now the flipped edge \((a, d)\).</p>
+
+		<p>The trick that helped most was drawing the two triangles before and after the flip and labeling every half-edge, then writing one <code>setNeighbors</code> call per half-edge directly from the drawing. Setting every pointer, instead of only the ones I thought had changed, avoided the hard-to-find bugs where one stale pointer (usually a vertex's <code>halfedge()</code>) breaks traversal later.</p>
+
+		<p>Below is <code>dae/teapot.dae</code> before and after several edge flips on the side of the body. Each flip swaps a quad's diagonal, so the pattern of triangles changes while the mesh stays closed with no holes. The thin dark slivers in the "after" image are long, thin triangles created by flipping a few edges in a row; the spec notes that a darker degenerate triangle is expected.</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/before_flips.png" width="400px"/>
+				  <figcaption>Before edge flips</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/after_flips.png" width="400px"/>
+				  <figcaption>After several edge flips</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
 
 		<h3>Part 5: Edge split</h3>
 		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
