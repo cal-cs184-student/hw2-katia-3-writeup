@@ -55,19 +55,22 @@
 
 		<br>
 		
-		Link to GitHub repository: (TODO) <a href="https://cs184.eecs.berkeley.edu/fa26">cs184.eecs.berkeley.edu/fa26</a>
+		Link to GitHub repository: (TODO) <a href="https://github.com/cal-cs184-student/hw2-katia-3">github.com/cal-cs184-student/hw2-katia-3</a>
 
-		<figure>
-			<img src="assets/teapot.png" alt="Teapot" style="width:50%"/>
-			<figcaption>You can add images with captions!</figcaption>
-		</figure>
+		
 
 		<!--
 		We've already added one heading per part, to make your write-up as navigable when grading. Please fit your write-up within these sections!
 		-->
 
 		<h2>Overview</h2>
-		Give a high-level overview of what you implemented in this homework. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the homework.
+		<p>In this homework, I built the core pieces of a small geometric modeling tool, working with two different ways of representing smooth shapes.</p>
+
+		<p>In Section I, I implemented de Casteljau's algorithm to evaluate Bezier curves and surfaces. For curves, each step linearly interpolates between neighboring control points until a single point on the curve remains. For surfaces, I applied the same 1D algorithm twice: first along each row of the control grid in \(u\), then along the resulting points in \(v\). This was enough to render the Utah teapot directly from its Bezier patches.</p>
+
+		<p>In Section II, I switched to triangle meshes stored in a half-edge data structure. I computed area-weighted vertex normals for smooth Phong shading, then implemented two local remeshing operations, edge flip and edge split, by carefully reassigning every pointer of every affected half-edge, vertex, edge, and face. Finally, I combined these operations into Loop subdivision, which upsamples a mesh by splitting each triangle into four and moving every vertex to a weighted average of its neighbors, turning a coarse mesh into a smooth one.</p>
+
+		<p>The most interesting thing I learned is how much the half-edge data structure makes possible with a few simple pointers. Once flip and split were correct, Loop subdivision was mostly a matter of combining them in the right order, with no new pointer manipulation. I also learned that the hardest part of mesh code is keeping the connectivity consistent rather than the math: a single stale pointer can break traversal far away from where the mistake was made. Drawing each operation before and after and labeling every element was the most reliable way to get it right. Lastly, the cube experiment showed that subdivision results depend on the mesh's connectivity, not just its shape, since the same cube subdivides lopsidedly or symmetrically depending on how its faces are triangulated.</p>
 
 		<h2>Section I: Bezier Curves and Surfaces</h2>
 
@@ -318,19 +321,7 @@
 			</table>
 		</div>
 
-		<h2>(Optional) Section III: Potential Extra Credit - Art Competition: Model something Creative</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-		<h2>Additional Notes (please remove)</h2>
-		<ul>
-			<li>You can also add code if you'd like as so: <code>code code code</code></li>
-			<li>If you'd like to add math equations, 
-				<ul>
-					<li>You can write inline equations like so: \( a^2 + b^2 = c^2 \)</li>
-					<li>You can write display equations like so: \[ a^2 + b^2 = c^2 \]</li>
-				</ul>
-			</li>
-		</ul>
+		
 		</div>
 	</body>
 </html>
