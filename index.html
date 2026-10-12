@@ -20,6 +20,24 @@
 				display: inline-block;
 			}
 
+			/* Keep both columns the same width so long captions don't squeeze an image */
+			table {
+				table-layout: fixed;
+			}
+
+			/* Line images up along the top even when captions wrap to different lengths */
+			td {
+				vertical-align: top;
+			}
+
+			/* Make every result image the same size, cropping the edges to fit */
+			td img {
+				width: 100%;
+				max-width: 400px;
+				aspect-ratio: 3 / 2;
+				object-fit: cover;
+			}
+
 			body {
 				font-family: 'Inter', sans-serif;
 			}
@@ -194,10 +212,111 @@
 		</div>
 
 		<h3>Part 5: Edge split</h3>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>An edge split takes the same pair of triangles \((a, b, c)\) and \((c, b, d)\), inserts a new vertex \(m\) at the midpoint of the shared edge \((b, c)\), and connects \(m\) to the opposite vertices \(a\) and \(d\), turning 2 triangles into 4. Unlike a flip, a split has to create new elements: 1 vertex, 3 edges, 2 faces, and 6 half-edges.</p>
+
+		<p>I implemented this in <code>HalfedgeMesh::splitEdge(e0)</code> in <code>student_code.cpp</code>, using the same approach as the flip:</p>
+		<ul>
+			<li><b>Labeling.</b> I collect the same elements as in Part 4: inner half-edges <code>h0</code>&ndash;<code>h5</code>, outer twins <code>h6</code>&ndash;<code>h9</code>, vertices \(a, b, c, d\), edges <code>e0</code>&ndash;<code>e4</code>, and faces <code>f0</code> and <code>f1</code>. If either face is a boundary face, I return immediately.</li>
+			<li><b>New elements.</b> I create the new vertex \(m\) with <code>newVertex()</code> and set its position to the midpoint \((b + c) / 2\). I then create 3 new edges (b&ndash;m, a&ndash;m, m&ndash;d), 2 new faces, and 6 new half-edges. This is exactly what the 4 triangles need, so nothing is left disconnected.</li>
+			<li><b>Reusing old elements.</b> The original edge <code>e0</code> becomes the m&ndash;c half of the split edge, and the old faces become \((m, c, a)\) and \((c, m, d)\). The new faces are \((b, m, a)\) and \((m, b, d)\). <code>h0</code> and <code>h3</code> stay twins along <code>e0</code>, but <code>h0</code> now starts at \(m\) instead of \(b\).</li>
+			<li><b>Rewiring.</b> As in the flip, I call <code>setNeighbors</code> on every half-edge in all four triangles, keeping each face counterclockwise, and then reset the <code>halfedge()</code> pointer of every vertex, edge, and face. Because <code>h0</code> no longer starts at \(b\), \(b\)'s pointer has to move to the new half-edge b &rarr; m. As the starter code asks, \(m\)'s pointer goes along the split edge.</li>
+			<li><b>Flags for Part 6.</b> I also mark \(m\) as new, the two halves of the original edge as not new, and the two edges from \(m\) to \(a\) and \(d\) as new. Loop subdivision uses these flags to decide which edges to flip.</li>
+		</ul>
+		<p>The function does constant work and returns \(m\).</p>
+
+		<p>The most useful trick was reusing my Part 4 drawing. Since the flip and split start from the same pair of triangles, I kept the same labels for every existing element and only had to add the new ones. Drawing the four output triangles and labeling each new half-edge's direction made the <code>setNeighbors</code> calls straightforward to write.</p>
+
+		<p>Below is the same part of <code>dae/teapot.dae</code> before any changes, after a few edge splits, and after a mix of splits and flips. Each split adds a vertex at the midpoint of an edge and connects it to the two opposite vertices, and the mesh stays closed with no holes after mixing in flips. (The pink edge in the last image is just the edge under the cursor.)</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/before_everything.png" width="400px"/>
+				  <figcaption>Before any splits or flips</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/splits_only.png" width="400px"/>
+				  <figcaption>After several edge splits</figcaption>
+				</td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/before_everything.png" width="400px"/>
+				  <figcaption>Before any splits or flips</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/splits_and_flips.png" width="400px"/>
+				  <figcaption>After a combination of edge splits and edge flips</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
 
 		<h3>Part 6: Loop subdivision for mesh upsampling</h3>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>Loop subdivision upsamples a triangle mesh by splitting every triangle into four (a 4-1 subdivision) and then moving every vertex to a weighted average of its neighbors. Repeating this converges to a smooth surface that approximates the original mesh. I implemented it in <code>MeshResampler::upsample(mesh)</code> in <code>student_code.cpp</code>, following the recommended order of computing all positions first, then changing the connectivity, then moving the vertices:</p>
+		<ol>
+			<li><b>Old vertex positions.</b> For each vertex, I mark it as old (<code>isNew = false</code>), walk around it with <code>h = h-&gt;twin()-&gt;next()</code> to sum its neighbors' positions and count its degree \(n\), and store
+			\[ \text{newPosition} = (1 - n u)\,\text{position} + u \sum \text{neighbors} \]
+			where \(u = 3/16\) if \(n = 3\), and \(u = 3/(8n)\) otherwise,
+			in <code>Vertex::newPosition</code>.</li>
+			<li><b>New vertex positions.</b> For each edge \((A, B)\) with opposite vertices \(C\) and \(D\), I mark it as old and store the position of the vertex that will be inserted on it, \(\frac{3}{8}(A + B) + \frac{1}{8}(C + D)\), in <code>Edge::newPosition</code>.</li>
+			<li><b>Split every original edge.</b> I loop over the edges, saving the next iterator before each split as the primer recommends. An edge is original if both of its endpoints are old vertices, because every edge created by a split touches the new midpoint vertex. This stops the loop from re-splitting edges it just created. After each split, I copy the edge's stored position into the new vertex's <code>newPosition</code>.</li>
+			<li><b>Flip new edges.</b> I flip every edge that is marked <code>isNew</code> and connects an old vertex to a new one. My <code>splitEdge</code> from Part 5 marks the two halves of the original edge as not new and the two edges to the opposite vertices as new, so only the correct edges get flipped. Flips don't create or delete elements, so a regular loop is safe here.</li>
+			<li><b>Update positions.</b> Finally, I copy <code>newPosition</code> into <code>position</code> for every vertex.</li>
+		</ol>
+		<p>The key trick was computing all the new positions on the original, coarse mesh before changing anything. The weights must use the original positions, and traversing the coarse mesh is much simpler than traversing the subdivided one. Using vertex age to decide which edges to split, and the <code>isNew</code> flags set inside <code>splitEdge</code> to decide which edges to flip, kept the split and flip loops simple and avoided infinite loops.</p>
+
+		<h4>Sharp corners and edges</h4>
+		<p>Loop subdivision is an <i>approximating</i> scheme: every vertex, including the original ones, is moved toward a weighted average of its neighbors. As a result, sharp corners and edges get rounded off and the mesh shrinks with each iteration. The cube below turns into a rounded blob instead of staying a cube.</p>
+		<p>Pre-splitting edges near a sharp feature reduces this effect. Splitting the edges around a corner several times adds vertices very close to it. Each vertex is then averaged with nearby vertices that lie on the same flat faces instead of with vertices across the cube, so that region is pulled in much less. In the screenshots below, I repeatedly split the edges meeting at one corner (highlighted) before subdividing. After subdivision, the area around that corner keeps more of its shape than the rest of the cube, which rounds off evenly.</p>
+		<p>The pre-splitting also has a side effect. My splits created long, thin triangles fanning out from the far corners, and after subdivision these show up as ripples and creases in the surface. Pre-splitting preserves features best when the added edges are short and evenly spaced. Uneven splits introduce their own artifacts because Loop subdivision faithfully smooths whatever connectivity it is given.</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/corner_presplit.png" width="400px"/>
+				  <figcaption>Edges around one corner pre-split</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/corner_presplit_subdivided.png" width="400px"/>
+				  <figcaption>After subdivision: the pre-split region keeps more shape, with ripples from the thin triangles</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		<h4>Asymmetry of the cube</h4>
+		<p><code>dae/cube.dae</code> represents each square face with two triangles, split along one diagonal. The diagonals don't run in a consistent pattern, so the corners have different degrees: they range from 3 to 6 depending on how many diagonals meet there. Since the Loop update weights depend on degree and on which neighbors a vertex has, each corner is pulled in a different direction and by a different amount. After a few subdivisions, the cube becomes visibly lopsided.</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/cube_original.png" width="400px"/>
+				  <figcaption>Original <code>dae/cube.dae</code></figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/cube_subdivided.png" width="400px"/>
+				  <figcaption>After several subdivisions: asymmetric</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		<p>To fix this, I pre-processed the cube by splitting the diagonal edge on each of the 6 faces. Each face then has a vertex at its center connected to all four of its corners, so every face is split into 4 triangles in the same symmetric pattern. Every corner of the cube ends up with the same degree (6) and the same arrangement of neighbors, so the subdivision treats all corners and faces identically and the result stays symmetric.</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="assets/cube_presplit.png" width="400px"/>
+				  <figcaption>Cube with each face's diagonal split</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="assets/cube_presplit_subdivided.png" width="400px"/>
+				  <figcaption>After the same number of subdivisions: evenly rounded and symmetric</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
 
 		<h2>(Optional) Section III: Potential Extra Credit - Art Competition: Model something Creative</h2>
 		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
